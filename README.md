@@ -6,7 +6,7 @@
 
 ```
 chat_to_llm/          # 单文件 CLI demo，按技术层级编号（01~04）
-enforce_agents_with_mcp/
+enforce_agent_with_mcp/
     mcp_server.py     # FastMCP Streamable HTTP Server（端口 8000）
     agent.py          # Agent：raw requests + mcp SDK + ToolManager
 ```
@@ -21,8 +21,8 @@ uv sync
 uv run python chat_to_llm/04_langchain_sdk_demo3.py
 
 # 运行 Remote MCP Agent demo（需两个终端）
-uv run python enforce_agents_with_mcp/mcp_server.py   # 终端1
-uv run python enforce_agents_with_mcp/agent.py        # 终端2
+uv run python enforce_agent_with_mcp/mcp_server.py   # 终端1
+uv run python enforce_agent_with_mcp/agent.py        # 终端2
 ```
 
 ## 环境变量

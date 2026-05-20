@@ -5,7 +5,7 @@
 渐进式演示项目，展示从原始 HTTP 调用到 LangChain Agent 的 LLM 集成方式。
 
 - `chat_to_llm/` — 单文件 CLI demo，按技术层级编号
-- `enforce_agents_with_mcp/` — 独立子工程，演示 Agent 对接远程 MCP Server
+- `enforce_agent_with_mcp/` — 独立子工程，演示 Agent 对接远程 MCP Server
 
 ## 构建与运行
 
@@ -15,8 +15,8 @@ uv run python chat_to_llm/04_langchain_sdk_demo3.py   # 运行指定 demo
 python -m py_compile chat_to_llm/FILE.py              # 快速语法检查
 
 # MCP demo（需两个终端）
-uv run python enforce_agents_with_mcp/mcp_server.py   # 终端1：启动 MCP Server
-uv run python enforce_agents_with_mcp/agent.py        # 终端2：启动 Agent
+uv run python enforce_agent_with_mcp/mcp_server.py   # 终端1：启动 MCP Server
+uv run python enforce_agent_with_mcp/agent.py        # 终端2：启动 Agent
 ```
 
 依赖管理使用 `uv`（非 pip/poetry），添加依赖用 `uv add <package>`。
@@ -34,7 +34,7 @@ uv run python enforce_agents_with_mcp/agent.py        # 终端2：启动 Agent
 
 新 demo 文件命名规则：`{序号}_{描述}_demo{变体}.py`，序号与技术层级对齐。
 
-### enforce_agents_with_mcp/
+### enforce_agent_with_mcp/
 
 | 文件 | 说明 |
 |------|------|
@@ -62,7 +62,7 @@ uv run python enforce_agents_with_mcp/agent.py        # 终端2：启动 Agent
 
 ### 代码风格
 - `chat_to_llm/` 全部同步代码（无 `async/await`）
-- `enforce_agents_with_mcp/agent.py` 为 async（MCP SDK 要求），LLM 调用仍同步
+- `enforce_agent_with_mcp/agent.py` 为 async（MCP SDK 要求），LLM 调用仍同步
 - CLI 交互使用 `prompt_toolkit`（非内置 `input()`）
 - 消息历史用 `list[dict]`（raw HTTP/SDK）或 LangChain Message 对象
 - 工具定义演进：手写 JSON Schema → `@pydantic_function_tool` → `@tool` → 远程 MCP
