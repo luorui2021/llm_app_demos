@@ -85,15 +85,18 @@ conversation_history.append(
 # ===========================
 # 获取模型回复（支持工具调用循环）
 # ===========================
-def get_response():
+def get_response(user_input: str):
+    conversation_history.append(HumanMessage(content=user_input))
+
     try:
         while True:
             response = llm_with_tools.invoke(conversation_history)
 
-            # 没有工具调用，直接输出最终回复
+            # 没有工具调用，追加最终回复并返回
             if not response.tool_calls:
                 print("\033[91mAI:\033[0m ", response.content)
-                return response.content
+                conversation_history.append(response)
+                return
 
             # 有工具调用，执行工具并将结果加入历史
             conversation_history.append(response)
@@ -128,10 +131,7 @@ def main():
         if user_input.lower() == "exit":
             break
 
-        conversation_history.append(HumanMessage(content=user_input))
-        reply = get_response()
-        if reply:
-            conversation_history.append(AIMessage(content=reply))
+        get_response(user_input)
         print()
 
 

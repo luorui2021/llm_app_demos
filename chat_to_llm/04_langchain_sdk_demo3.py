@@ -6,7 +6,6 @@
 
 import os
 from datetime import datetime
-from typing import Any
 import httpx
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
@@ -75,89 +74,55 @@ conversation_history = []
 
 # ===========================
 # 获取模型回复（agent 自动处理工具调用循环，并流式输出）
+# 参考文档：https://docs.langchain.com/oss/python/langchain/event-streaming
 # ===========================
-def extract_text_from_chunk(message_chunk: Any) -> str:
-    """从 LangChain/LangGraph 流式事件里的消息块中提取可打印文本。
+def get_response(user_input: str):
+    global conversation_history
 
-    `agent.stream(..., stream_mode="messages")` 返回的消息块类型并不完全固定，
-    在不同模型、不同版本的 LangChain/LangGraph 下，可能出现以下几种常见形态：
+    conversation_history.append(HumanMessage(content=user_input))
 
-    1. 直接就是字符串
-    2. 具有 `text` 属性的消息块对象
-    3. 具有 `content` 属性，且 `content` 本身是字符串
-    4. 具有 `content` 属性，且 `content` 是由多个内容片段组成的列表
-
-    这个函数的目标很单纯：尽量从这些可能的结构里抽取出“当前这一次增量输出
-    对应的纯文本”，供终端逐段打印。若当前块中没有可显示文本，则返回空字符串。
-    """
-
-    # 某些实现会直接把增量文本作为 str 返回，此时可以直接输出。
-    if isinstance(message_chunk, str):
-        return message_chunk
-
-    # 有些消息块对象会暴露 text 属性；如果它已经是非空字符串，优先使用。
-    # 这样可以少做一层 content 解析。
-    text_value = getattr(message_chunk, "text", None)
-    if isinstance(text_value, str) and text_value:
-        return text_value
-
-    # 更常见的情况是消息块对象把内容放在 content 里。
-    # content 既可能是完整字符串，也可能是分片结构。
-    content = getattr(message_chunk, "content", "")
-
-    # 如果 content 已经是字符串，直接返回即可。
-    if isinstance(content, str):
-        return content
-
-    # 某些模型返回的 content 是一个列表，列表中每个元素代表一个内容片段。
-    # 这里只提取 type == "text" 的片段，并按原顺序拼接成最终可打印文本。
-    # 其他非文本片段（例如工具调用、结构化块等）会被忽略。
-    if isinstance(content, list):
-        return "".join(
-            item.get("text", "")
-            for item in content
-            if isinstance(item, dict) and item.get("type") == "text"
-        )
-
-    # 兜底：遇到当前版本未覆盖的 chunk 结构时，不抛异常，直接返回空字符串，
-    # 这样流式输出流程仍可继续执行。
-    return ""
-
-
-def get_response():
     try:
         print("\033[91mAI:\033[0m ", end="", flush=True)
-        full_reply = []
+        input_messages = list(conversation_history)
+        stream = agent.stream_events(
+            {"messages": input_messages},
+            version="v3",
+        )
 
-        for stream_event in agent.stream(
-            {"messages": conversation_history},
-            stream_mode="messages",
-        ):
-            if not isinstance(stream_event, tuple) or len(stream_event) != 2:
-                # 非预期的事件格式，直接忽略
-                continue
-
-            message_chunk, metadata = stream_event
-            if not isinstance(metadata, dict) or metadata.get("langgraph_node") != "model":
-                # 只处理模型输出的消息块，忽略工具调用等其他事件
-                continue
-
-            delta = extract_text_from_chunk(message_chunk)
-            if delta:
+        for message in stream.messages:
+            # `message.text` 是单条模型消息的流式文本视图。
+            # 遍历它时拿到的是当前这次模型调用产生的文本增量；
+            # 如果这一轮只是先生成工具调用而没有自然语言文本，这里可能为空。
+            for delta in message.text:
                 print(delta, end="", flush=True)
-                full_reply.append(delta)
 
+            print(end=f"\033[91m[消息分隔符]\033[0m", flush=True)
+
+            # `message.output` 是单条模型消息完成后的完整对象。
+            # 它通常是一个 AIMessage，除了最终文本外，还可能带有 tool_calls、
+            # usage_metadata、content_blocks 等结构化字段，适合写入会话历史。
+            completed_message = message.output
+            if isinstance(completed_message, AIMessage):
+                conversation_history.append(completed_message)
+
+        # `stream.output` 是整轮 agent 执行完成后的完整状态。
+        # 对 create_agent 来说，它通常是一个包含 `messages` 的状态字典，
+        # 里面会汇总用户消息、带 tool_calls 的 AIMessage、ToolMessage 和最终 AIMessage。
+        final_state = stream.output
+        conversation_history = list(final_state["messages"])
         print()
-        return "".join(full_reply)
+        return conversation_history
     except Exception as e:
         print("请求出错:", e)
-        return ""
+        return None
 
 
 # ===========================
 # 命令行交互
 # ===========================
 def main():
+    global conversation_history
+
     print("=== 欢迎使用连续对话 CLI ===")
     print("输入 'exit' 退出程序\n")
 
@@ -168,10 +133,7 @@ def main():
         if user_input.lower() == "exit":
             break
 
-        conversation_history.append(HumanMessage(content=user_input))
-        reply = get_response()
-        if reply:
-            conversation_history.append(AIMessage(content=reply))
+        get_response(user_input)
         print()
 
 
