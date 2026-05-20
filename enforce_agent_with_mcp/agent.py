@@ -117,6 +117,12 @@ class ToolManager:
             return f"工具调用失败: {exc}"
 
         # result.content 是 list[TextContent | ImageContent | EmbeddedResource]
+        # MCP 规范中工具返回值是一个内容块列表，而非单一字符串：
+        #   - TextContent：文本结果，有 .text 属性，是最常见的类型
+        #   - ImageContent：图片（base64 编码），无 .text 属性，此处忽略
+        #   - EmbeddedResource：嵌入资源（文件/URI），无 .text 属性，此处忽略
+        # 用 hasattr(block, "text") 过滤，只提取可读的文本块，
+        # 多块文本用换行拼接后返回；若全为非文本内容则返回占位提示。
         texts = [
             block.text
             for block in result.content
