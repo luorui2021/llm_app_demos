@@ -21,6 +21,7 @@ from prompt_toolkit.formatted_text import HTML
 # ===========================
 API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 API_URL = "https://api.deepseek.com/v1/chat/completions"
+MODEL = "deepseek-chat"
 
 # 代理设置（支持HTTP或SOCKS5）
 PROXIES = {
@@ -52,7 +53,7 @@ def get_response():
     }
 
     data = {
-        "model": "deepseek-chat",
+        "model": MODEL,
         "messages": conversation_history,
         "max_tokens": 1024,
         "temperature": 1.0,
