@@ -8,8 +8,6 @@ uv.lock
 # 忽略 build 文件夹及内部所有内容
 build/
 temp/
-
-# 忽略 Python 缓存目录
 __pycache__/
 
 
