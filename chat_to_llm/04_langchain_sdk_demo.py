@@ -12,11 +12,15 @@ from pydantic import SecretStr
 # ===========================
 # 配置部分
 # ===========================
-API_KEY = os.environ.get("DEEPSEEK_API_KEY", "your_api_key_here")
+API_KEY = os.environ.get("DEEPSEEK_API_KEY", "api_key_not_set")
 BASE_URL = "https://api.deepseek.com/v1"
+MODEL = "deepseek-chat"
 
-# 代理设置（支持HTTP或SOCKS5）
-PROXY_URL = "http://127.0.0.1:13128"
+# 代理设置(通过自定义httpx客户端实现，支持HTTP或SOCKS5)，并且忽略 SSL 验证
+_http_client = httpx.Client(
+    proxy="http://127.0.0.1:13128",
+    verify=False,
+)
 
 # ===========================
 # LangChain ChatOpenAI 客户端（含代理，忽略 SSL 验证）
@@ -27,14 +31,10 @@ PROXY_URL = "http://127.0.0.1:13128"
 llm = ChatOpenAI(
     api_key=SecretStr(API_KEY),
     base_url=BASE_URL,
-    model="deepseek-chat",
+    model=MODEL,
     max_completion_tokens=1024,
     temperature=1.0,
-    streaming=True,
-    http_client=httpx.Client(
-        proxy=PROXY_URL,
-        verify=False,
-    ),
+    http_client=_http_client
 )
 
 # ===========================

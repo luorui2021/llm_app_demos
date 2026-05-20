@@ -11,6 +11,7 @@ from prompt_toolkit.formatted_text import HTML
 # ===========================
 API_KEY = os.environ.get("OPENAI_API_KEY")
 API_URL = "https://api.openai.com/v1/completions"
+MODEL = "gpt-3.5-turbo-instruct"  # 或其他 Completion 模型： gpt-4o-mini
 
 # 代理设置（支持HTTP或SOCKS5）
 PROXIES = {
@@ -41,7 +42,7 @@ def get_response():
     }
 
     data = {
-        "model": "gpt-3.5-turbo-instruct",  # 或其他 Completion 模型： gpt-4o-mini
+        "model": MODEL,  # 使用配置的模型
         "prompt": full_prompt,
         "max_tokens": 20,
         "temperature": 0,

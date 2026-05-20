@@ -11,9 +11,13 @@ from prompt_toolkit.formatted_text import HTML
 # ===========================
 API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 BASE_URL = "https://api.deepseek.com/v1"
+MODEL = "deepseek-chat"
 
-# 代理设置（支持HTTP或SOCKS5）
-PROXY_URL = "http://127.0.0.1:13128"
+# 代理设置(通过自定义httpx客户端实现，支持HTTP或SOCKS5)，并且忽略 SSL 验证
+_http_client = httpx.Client(
+    proxy="http://127.0.0.1:13128",
+    verify=False,
+)
 
 # ===========================
 # OpenAI 客户端（含代理，忽略 SSL 验证）
@@ -21,10 +25,7 @@ PROXY_URL = "http://127.0.0.1:13128"
 client = OpenAI(
     api_key=API_KEY,
     base_url=BASE_URL,
-    http_client=httpx.Client(
-        proxy=PROXY_URL,
-        verify=False,
-    ),
+    http_client=_http_client,
 )
 
 # ===========================
@@ -42,23 +43,23 @@ conversation_history.append({
 # ===========================
 def get_response():
     try:
-        stream = client.chat.completions.create(
-            model="deepseek-chat",
+        with client.chat.completions.create(
+            model=MODEL,
             messages=conversation_history,
             max_tokens=1024,
             temperature=1.0,
             stream=True,
-        )
+        ) as stream:
 
-        print("\033[91mAI:\033[0m ", end="", flush=True)
-        full_reply = []
-        for chunk in stream:
-            delta = chunk.choices[0].delta.content or ""
-            if delta:
-                print(delta, end="", flush=True)
-                full_reply.append(delta)
-        print()  # 换行
-        return "".join(full_reply)
+            print("\033[91mAI:\033[0m ", end="", flush=True)
+            full_reply = []
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content or ""
+                if delta:
+                    print(delta, end="", flush=True)
+                    full_reply.append(delta)
+            print()  # 换行
+            return "".join(full_reply)
     except Exception as e:
         print("请求出错:", e)
         return ""

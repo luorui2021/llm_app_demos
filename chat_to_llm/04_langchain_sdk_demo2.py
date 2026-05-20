@@ -9,11 +9,11 @@
 工具。
 3. 工具调用循环：在 get_response 函数中实现了一个循环，模型每次生成回复后检查是否有工具调用，
 如果有则执行工具并将结果加入对话历史，然后继续生成下一轮回复，直到没有工具调用为止。
-4. 流式输出：模型回复仍然是流式输出，用户可以实时看到模型的回复内容和工具调用结果，提升交互体验。
+4. 并非流式输出，而是每次生成完整回复后再输出，以简单明了的方式展示工具调用的效果。
 """
 
 import os
-import datetime
+from datetime import datetime
 import httpx
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
@@ -25,11 +25,15 @@ from pydantic import SecretStr
 # ===========================
 # 配置部分
 # ===========================
-API_KEY = os.environ.get("DEEPSEEK_API_KEY", "your_api_key_here")
+API_KEY = os.environ.get("DEEPSEEK_API_KEY", "api_key_not_set")
 BASE_URL = "https://api.deepseek.com/v1"
+MODEL = "deepseek-chat"
 
-# 代理设置（支持HTTP或SOCKS5）
-PROXY_URL = "http://127.0.0.1:13128"
+# 代理设置(通过自定义httpx客户端实现，支持HTTP或SOCKS5)，并且忽略 SSL 验证
+_http_client = httpx.Client(
+    proxy="http://127.0.0.1:13128",
+    verify=False,
+)
 
 # ===========================
 # LangChain ChatOpenAI 客户端（含代理，忽略 SSL 验证）
@@ -37,13 +41,10 @@ PROXY_URL = "http://127.0.0.1:13128"
 llm = ChatOpenAI(
     api_key=SecretStr(API_KEY),
     base_url=BASE_URL,
-    model="deepseek-chat",
+    model=MODEL,
     max_completion_tokens=1024,
     temperature=1.0,
-    http_client=httpx.Client(
-        proxy=PROXY_URL,
-        verify=False,
-    ),
+    http_client=_http_client
 )
 
 # ===========================
@@ -53,7 +54,7 @@ llm = ChatOpenAI(
 def get_current_time() -> str:
     """获取当前的日期和时间"""
     print(f"\033[33m[工具执行: get_current_time()]\033[0m")
-    return datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    return datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
 
 
 @tool

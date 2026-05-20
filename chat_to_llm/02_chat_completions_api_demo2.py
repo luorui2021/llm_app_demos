@@ -15,6 +15,7 @@ from prompt_toolkit.formatted_text import HTML
 # ===========================
 API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 API_URL = "https://api.deepseek.com/v1/chat/completions"
+MODEL = "deepseek-chat"
 
 # 代理设置（支持HTTP或SOCKS5）
 PROXIES = {
@@ -27,7 +28,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===========================
-# HTTP 会话（复用连接）
+# HTTP 会话（复用连接，为简化程序，不考虑close）
 # ===========================
 session = requests.Session()
 session.proxies = PROXIES
@@ -53,7 +54,7 @@ def get_response():
     }
 
     data = {
-        "model": "deepseek-chat",
+        "model": MODEL,
         "messages": conversation_history,
         "max_tokens": 1024,
         "temperature": 1.0,
@@ -116,7 +117,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    finally:
-        session.close()
+    main()
