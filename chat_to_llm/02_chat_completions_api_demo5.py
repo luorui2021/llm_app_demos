@@ -1,9 +1,9 @@
 """
 演示使用 Chat Completions API + requests 实现支持工具调用的命令行连续对话。
 
-相比于 demo3：
-1、使用 pydantic_function_tool 自动生成工具 JSON Schema，简化了 TOOLS 的定义；
-2、所有 HTTP 请求均为非流式，通过 requests 发送，不使用 OpenAI 客户端。
+相比于 demo4：
+1、切换到推理模型 deepseek-v4-pro，并输出详细思维链（reasoning_content）。
+2、工具调用循环保持非流式，最终回复前会打印灰色思维链内容。
 """
 
 import json
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 # ===========================
 API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 API_URL = "https://api.deepseek.com/v1/chat/completions"
-MODEL = "deepseek-chat"
+MODEL = "deepseek-v4-pro"  # 推理模型，响应包含 reasoning_content 思维链
 
 PROXIES = {
     "http": "http://127.0.0.1:13128",
@@ -110,6 +110,14 @@ def execute_tool(name: str, arguments_json: str) -> str:
         return f"工具执行失败: {exc}"
 
 
+def print_reasoning(reasoning: str) -> None:
+    """将思维链内容以灰色缩进格式打印。"""
+    print("\033[90m[思维链]\033[0m")
+    for line in reasoning.splitlines():
+        print(f"\033[90m  {line}\033[0m")
+    print()
+
+
 # ===========================
 # 聊天记录
 # ===========================
@@ -126,7 +134,7 @@ conversation_history = [
 
 
 # ===========================
-# 工具调用循环
+# 工具调用循环（推理模型，打印思维链）
 # ===========================
 def get_response_with_tools(user_input: str) -> str:
     conversation_history.append({"role": "user", "content": user_input})
@@ -138,13 +146,19 @@ def get_response_with_tools(user_input: str) -> str:
                 "messages": conversation_history,
                 "tools": TOOLS,
                 "tool_choice": "auto",
-                "max_tokens": 1024,
+                "max_tokens": 8192,
                 "temperature": 1.0,
             }
             resp = session.post(API_URL, headers=HEADERS, data=json.dumps(data))
             resp.raise_for_status()
             message = resp.json()["choices"][0]["message"]
             tool_calls = message.get("tool_calls")
+
+            # 打印本轮思维链（若存在）
+            # 注意：reasoning_content字段并非 OpenAI API 标准输出，但已有多家模型提供商在响应中加入了该字段以输出思维链内容，使用时需根据实际情况调整
+            reasoning = message.get("reasoning_content", "")
+            if reasoning:
+                print_reasoning(reasoning)
 
             if not tool_calls:
                 reply = message.get("content", "")
@@ -174,7 +188,7 @@ def get_response_with_tools(user_input: str) -> str:
 # 命令行交互
 # ===========================
 def main():
-    print("=== 欢迎使用支持工具调用的连续对话 CLI ===")
+    print("=== 欢迎使用推理模型连续对话 CLI（含思维链输出）===")
     print("输入 'exit' 退出程序\n")
 
     while True:

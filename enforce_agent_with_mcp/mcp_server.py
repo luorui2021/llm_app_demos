@@ -2,7 +2,7 @@
 Demo MCP Server — 使用 FastMCP 提供4个样例工具，通过 Streamable HTTP 协议暴露。
 
 启动方式：
-    uv run python enforce_agents_with_mcp/mcp_server.py
+    uv run python enforce_agent_with_mcp/mcp_server.py
 
 服务地址：http://127.0.0.1:8000/mcp
 """
